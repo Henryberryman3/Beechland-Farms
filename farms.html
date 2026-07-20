@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beechland Farms - Farms</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="supabase.js"></script>
     <style>
         body {
             margin: 0;
@@ -170,17 +172,6 @@
     </div>
 
     <script>
-        const apiBase = '/api';
-
-        async function fetchFarms() {
-            const response = await fetch(`${apiBase}/farms`);
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Unable to load farms');
-            }
-            return response.json();
-        }
-
         function createFarmCard(farm) {
             const card = document.createElement('div');
             card.className = 'farm-card';
@@ -197,43 +188,34 @@
             link.style.display = 'inline-block';
             link.style.marginTop = '1rem';
             link.textContent = 'View Fields';
-            link.href = `fields.html?farmId=${farm.id}`;
+            link.href = `fields.html?farmId=${encodeURIComponent(farm.id)}`;
             p.appendChild(link);
             card.appendChild(p);
             return card;
         }
 
-        function renderFarmsList(farms) {
-            const container = document.getElementById('farms-list');
-            container.innerHTML = '';
-            if (!farms.length) {
-                const empty = document.createElement('div');
-                empty.className = 'empty-state';
-                empty.textContent = 'No farms yet. Add one from the home page.';
-                container.appendChild(empty);
-                return;
-            }
-            farms.forEach(farm => container.appendChild(createFarmCard(farm)));
-        }
-
-        function showDebug(farms) {
+        function showDebug(farms, source) {
             const out = document.getElementById('debug-output');
             if (!out) return;
-            out.textContent = `Farms loaded from backend: ${farms.length}\n` + JSON.stringify(farms.map(f => ({ id: f.id, name: f.name })), null, 2);
+            out.textContent = `Farms loaded from ${source}: ${farms.length}\n` + JSON.stringify(farms.map(f => ({ id: f.id, name: f.name })), null, 2);
         }
 
         async function loadAndRender() {
             try {
                 const farms = await fetchFarms();
-                console.log('Loaded farms count:', farms.length);
-                renderFarmsList(farms);
-                showDebug(farms);
-            } catch (err) {
-                console.error('Failed loading farms:', err);
                 const container = document.getElementById('farms-list');
-                if (container) container.innerHTML = `<div class="empty-state">Error loading farms: ${err.message}</div>`;
-                const out = document.getElementById('debug-output');
-                if (out) out.textContent = `Error: ${err.message}`;
+                container.innerHTML = '';
+                if (!farms.length) {
+                    container.innerHTML = '<div class="empty-state">No farms yet. Add one from the home page.</div>';
+                } else {
+                    farms.forEach(farm => container.appendChild(createFarmCard(farm)));
+                }
+                showDebug(farms, supabaseEnabled() ? 'Supabase' : 'local storage');
+            } catch (error) {
+                console.error(error);
+                const container = document.getElementById('farms-list');
+                container.innerHTML = '<div class="empty-state">Unable to load farms.</div>';
+                showDebug([], 'error');
             }
         }
 

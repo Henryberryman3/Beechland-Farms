@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beechland Farms - Fields</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="supabase.js"></script>
     <style>
         * {
             margin: 0;
@@ -295,11 +297,15 @@
     </div>
 
     <script>
-        const apiBase = '/api';
         let currentFarmId;
         let pendingUploads = [];
         let selectedFieldIds = new Set();
         let currentFields = [];
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
 
         function escapeHtml(value) {
             return String(value)
@@ -310,100 +316,10 @@
                 .replace(/'/g, '&#39;');
         }
 
-        function getQueryParam(name) {
-            const params = new URLSearchParams(window.location.search);
-            return params.get(name);
-        }
-
-        function getUsedFieldNumbers(fields) {
-            const used = new Set();
-            (fields || []).forEach(field => {
-                const match = /^field\s+(\d+)$/i.exec((field.name || '').trim());
-                if (match) {
-                    used.add(Number(match[1]));
-                }
-            });
-            return used;
-        }
-
-        function getNextUnusedFieldNumber(usedNumbers) {
-            let next = 1;
-            while (usedNumbers.has(next)) {
-                next += 1;
-            }
-            usedNumbers.add(next);
-            return next;
-        }
-
         function updateStatus(message, isError = false) {
             const node = document.getElementById('status-text');
             node.textContent = message;
             node.style.color = isError ? '#c0392b' : '#4a6a31';
-        }
-
-        function formatImageDateLabel(file, index) {
-            const timestamp = file && file.lastModified ? file.lastModified : Date.now();
-            const date = new Date(timestamp);
-            const datePart = date.toLocaleDateString();
-            const timePart = date.toLocaleTimeString();
-            const suffix = index > 0 ? ` #${index + 1}` : '';
-            return `${datePart} ${timePart}${suffix}`;
-        }
-
-        function fetchJson(url, options) {
-            return fetch(url, options).then(async response => {
-                const body = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(body.error || 'Request failed');
-                }
-                return body;
-            });
-        }
-
-        function fetchFarm(farmId) {
-            return fetchJson(`${apiBase}/farm?farmId=${encodeURIComponent(farmId)}`);
-        }
-
-        function fetchFields(farmId) {
-            return fetchJson(`${apiBase}/fields?farmId=${encodeURIComponent(farmId)}`);
-        }
-
-        function createField(farmId, name) {
-            return fetchJson(`${apiBase}/fields`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ farmId, name })
-            });
-        }
-
-        function uploadImage(fieldId, file) {
-            const formData = new FormData();
-            formData.append('fieldId', fieldId);
-            formData.append('image', file, file.name);
-            return fetchJson(`${apiBase}/images`, {
-                method: 'POST',
-                body: formData
-            });
-        }
-
-        function deleteField(fieldId) {
-            return fetchJson(`${apiBase}/fields/${encodeURIComponent(fieldId)}`, {
-                method: 'DELETE'
-            });
-        }
-
-        function renameField(fieldId, name) {
-            return fetchJson(`${apiBase}/fields/${encodeURIComponent(fieldId)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-        }
-
-        function deleteImages(fieldId) {
-            return fetchJson(`${apiBase}/images?fieldId=${encodeURIComponent(fieldId)}`, {
-                method: 'DELETE'
-            });
         }
 
         function renderUploadList() {
@@ -412,7 +328,6 @@
                 container.innerHTML = '';
                 return;
             }
-
             container.innerHTML = pendingUploads.map(upload => `
                 <div class="upload-item">
                     <div class="upload-file">${escapeHtml(upload.file.name)}</div>
@@ -423,18 +338,18 @@
 
         function renderFieldsList(fields) {
             const list = document.getElementById('fields-list');
-            currentFields = fields;
-            const validFieldIds = new Set(fields.map(field => field.id));
+            currentFields = fields || [];
+            const validFieldIds = new Set(currentFields.map(field => field.id));
             selectedFieldIds = new Set([...selectedFieldIds].filter(id => validFieldIds.has(id)));
 
-            if (!fields.length) {
+            if (!currentFields.length) {
                 selectedFieldIds.clear();
                 list.innerHTML = '<div class="empty-state">No fields yet. Upload an image to create your first field.</div>';
                 updateBulkDeleteControls();
                 return;
             }
 
-            list.innerHTML = fields.map(field => `
+            list.innerHTML = currentFields.map(field => `
                 <div class="field-item">
                     <div class="field-main">
                         <input class="field-select" type="checkbox" data-field-select-id="${field.id}" ${selectedFieldIds.has(field.id) ? 'checked' : ''}>
@@ -454,7 +369,7 @@
                     const fieldId = button.getAttribute('data-field-id');
                     if (!fieldId) return;
                     if (action === 'view') {
-                        window.location.href = `field.html?farmId=${currentFarmId}&fieldId=${fieldId}`;
+                        window.location.href = `field.html?farmId=${encodeURIComponent(currentFarmId)}&fieldId=${encodeURIComponent(fieldId)}`;
                         return;
                     }
                     if (action === 'rename') {
@@ -493,44 +408,71 @@
             button.textContent = count ? `Delete Selected (${count})` : 'Delete Selected';
         }
 
-        function loadFarm() {
-            return fetchFarm(currentFarmId).then(farm => {
-                document.getElementById('page-title').textContent = `${farm.name} Fields`;
-                document.getElementById('header-subtitle').textContent = `${farm.name} - Fields`;
-                return farm;
+        function getUsedFieldNumbers(fields) {
+            const used = new Set();
+            (fields || []).forEach(field => {
+                const match = /^field\s+(\d+)$/i.exec((field.name || '').trim());
+                if (match) {
+                    used.add(Number(match[1]));
+                }
             });
+            return used;
         }
 
-        function loadFields() {
-            return fetchFields(currentFarmId).then(fields => {
-                renderFieldsList(fields);
-                return fields;
-            });
-        }
-
-        function createFieldsFromUploads() {
-            if (!pendingUploads.length) {
-                updateStatus('Select one or more images first.', true);
-                return;
+        function getNextUnusedFieldNumber(usedNumbers) {
+            let next = 1;
+            while (usedNumbers.has(next)) {
+                next += 1;
             }
-            const uploads = pendingUploads.slice();
-            pendingUploads = [];
-            renderUploadList();
-            Promise.all(uploads.map(upload =>
-                createField(currentFarmId, upload.fieldName)
-                    .then(field => uploadImage(field.id, upload.file))
-            ))
-                .then(() => loadFields())
-                .then(fields => {
-                    updateStatus(`${uploads.length} field${uploads.length === 1 ? '' : 's'} created from uploads.`);
-                })
-                .catch(err => {
-                    console.error(err);
-                    updateStatus('Unable to create fields from uploaded images.', true);
-                });
+            usedNumbers.add(next);
+            return next;
         }
 
-        function renameFieldById(fieldId) {
+        async function loadFarm() {
+            const farm = await fetchFarm(currentFarmId);
+            if (!farm) {
+                throw new Error('Farm not found');
+            }
+            document.getElementById('page-title').textContent = `${farm.name} Fields`;
+            document.getElementById('header-subtitle').textContent = `${farm.name} - Fields`;
+            return farm;
+        }
+
+        async function loadFields() {
+            const fields = await fetchFields(currentFarmId);
+            renderFieldsList(fields || []);
+            return fields;
+        }
+
+        async function deleteFieldById(fieldId) {
+            if (!confirm('Delete this field and all its images?')) return;
+            try {
+                await deleteField(fieldId);
+                selectedFieldIds.delete(fieldId);
+                await loadFields();
+                updateStatus('Field deleted.');
+            } catch (err) {
+                console.error(err);
+                updateStatus('Unable to delete field.', true);
+            }
+        }
+
+        async function deleteSelectedFields() {
+            const ids = Array.from(selectedFieldIds);
+            if (!ids.length) return;
+            if (!confirm(`Delete ${ids.length} selected field${ids.length === 1 ? '' : 's'} and all their images?`)) return;
+            try {
+                await Promise.all(ids.map(id => deleteField(id)));
+                selectedFieldIds.clear();
+                await loadFields();
+                updateStatus(`${ids.length} field${ids.length === 1 ? '' : 's'} deleted.`);
+            } catch (err) {
+                console.error(err);
+                updateStatus('Unable to delete selected fields.', true);
+            }
+        }
+
+        async function renameFieldById(fieldId) {
             const field = currentFields.find(item => item.id === fieldId);
             if (!field) return;
             const nextName = prompt('Rename field:', field.name);
@@ -540,50 +482,49 @@
                 updateStatus('Field name cannot be empty.', true);
                 return;
             }
-            renameField(fieldId, trimmed)
-                .then(() => loadFields())
-                .then(() => updateStatus('Field renamed.'))
-                .catch(() => updateStatus('Unable to rename field.', true));
-        }
-
-        function deleteFieldById(fieldId) {
-            if (!confirm('Delete this field and all its images?')) return;
-            deleteField(fieldId)
-                .then(() => loadFields())
-                .then(() => {
-                    selectedFieldIds.delete(fieldId);
-                    updateStatus('Field deleted.');
-                })
-                .catch(() => updateStatus('Unable to delete field.', true));
-        }
-
-        function deleteSelectedFields() {
-            const ids = Array.from(selectedFieldIds);
-            if (!ids.length) return;
-            if (!confirm(`Delete ${ids.length} selected field${ids.length === 1 ? '' : 's'} and all their images?`)) return;
-            Promise.all(ids.map(id => deleteField(id)))
-                .then(() => {
-                    selectedFieldIds.clear();
-                    return loadFields();
-                })
-                .then(() => updateStatus(`${ids.length} field${ids.length === 1 ? '' : 's'} deleted.`))
-                .catch(() => updateStatus('Unable to delete selected fields.', true));
+            try {
+                await renameField(fieldId, trimmed);
+                await loadFields();
+                updateStatus('Field renamed.');
+            } catch (err) {
+                console.error(err);
+                updateStatus('Unable to rename field.', true);
+            }
         }
 
         function assignPendingUploadsWithAutoNames(files) {
-            return loadFields().then(fields => {
-                const usedNumbers = getUsedFieldNumbers(fields);
-                pendingUploads = Array.from(files).map(file => {
-                    const nextNumber = getNextUnusedFieldNumber(usedNumbers);
-                    return {
-                        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                        file,
-                        fieldName: `Field ${nextNumber}`
-                    };
-                });
-                renderUploadList();
-                updateStatus(`${pendingUploads.length} pending upload${pendingUploads.length === 1 ? '' : 's'}. Names assigned automatically.`);
+            const usedNumbers = getUsedFieldNumbers(currentFields);
+            pendingUploads = Array.from(files).map(file => {
+                const nextNumber = getNextUnusedFieldNumber(usedNumbers);
+                return {
+                    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                    file,
+                    fieldName: `Field ${nextNumber}`
+                };
             });
+            renderUploadList();
+            updateStatus(`${pendingUploads.length} pending upload${pendingUploads.length === 1 ? '' : 's'}. Names assigned automatically.`);
+        }
+
+        async function createFieldsFromUploads() {
+            if (!pendingUploads.length) {
+                updateStatus('Select one or more images first.', true);
+                return;
+            }
+            const uploads = pendingUploads.slice();
+            pendingUploads = [];
+            renderUploadList();
+            try {
+                await Promise.all(uploads.map(async upload => {
+                    const field = await createField(currentFarmId, upload.fieldName);
+                    await uploadImage(field.id, upload.file);
+                }));
+                await loadFields();
+                updateStatus(`${uploads.length} field${uploads.length === 1 ? '' : 's'} created from uploads.`);
+            } catch (err) {
+                console.error(err);
+                updateStatus('Unable to create fields from uploaded images.', true);
+            }
         }
 
         document.getElementById('file-input').addEventListener('change', event => {
@@ -594,8 +535,7 @@
                 updateStatus('No files selected.');
                 return;
             }
-            assignPendingUploadsWithAutoNames(files)
-                .catch(() => updateStatus('Unable to auto-name pending fields.', true));
+            assignPendingUploadsWithAutoNames(files);
         });
 
         document.getElementById('create-fields-btn').addEventListener('click', createFieldsFromUploads);
@@ -607,22 +547,20 @@
             updateStatus('Pending uploads cleared.');
         });
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             currentFarmId = getQueryParam('farmId');
             if (!currentFarmId) {
-                alert('Farm not found');
+                alert('Invalid farm selected.');
                 window.location.href = 'index.html';
                 return;
             }
-            loadFarm().catch(err => {
+            try {
+                await loadFarm();
+                await loadFields();
+            } catch (err) {
                 console.error(err);
-                alert('Unable to load farm.');
-                window.location.href = 'index.html';
-            });
-            loadFields().catch(err => {
-                console.error(err);
-                updateStatus('Unable to load fields.', true);
-            });
+                updateStatus('Unable to load farm details. Please check the farm link.', true);
+            }
         });
     </script>
 </body>

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beechland Farms - Field Images</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="supabase.js"></script>
     <style>
         * {
             margin: 0;
@@ -272,8 +274,6 @@
         const modalImage = document.getElementById('modal-image');
         const modalCaption = document.getElementById('modal-caption');
 
-        const apiBase = '/api';
-
         function getQueryParam(name) {
             const params = new URLSearchParams(window.location.search);
             return params.get(name);
@@ -285,54 +285,10 @@
             node.style.color = error ? '#c0392b' : '#555';
         }
 
-        function fetchJson(url, options) {
-            return fetch(url, options).then(async response => {
-                const body = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(body.error || 'Request failed');
-                }
-                return body;
-            });
-        }
-
-        function fetchImages(fieldId) {
-            return fetchJson(`${apiBase}/images?fieldId=${encodeURIComponent(fieldId)}`);
-        }
-
-        function uploadImage(fieldId, file) {
-            const formData = new FormData();
-            formData.append('fieldId', fieldId);
-            formData.append('image', file, file.name);
-            return fetchJson(`${apiBase}/images`, {
-                method: 'POST',
-                body: formData
-            });
-        }
-
-        function loadFarmAndFieldNames() {
-            return fetchJson(`${apiBase}/farm?farmId=${encodeURIComponent(farmId)}`)
-                .then(farm => {
-                    document.getElementById('farm-name').textContent = farm.name;
-                    document.getElementById('back-link').href = `fields.html?farmId=${farmId}`;
-                    return fetchJson(`${apiBase}/field?fieldId=${encodeURIComponent(fieldId)}`);
-                })
-                .then(field => {
-                    document.getElementById('field-name').textContent = field.name;
-                    document.getElementById('page-title').textContent = field.name;
-                });
-        }
-
-        function getImageUrl(filename) {
-            return `uploads/${encodeURIComponent(filename)}`;
-        }
-
-        function openImageModal(imageData) {
-            if (currentModalUrl) {
-                URL.revokeObjectURL(currentModalUrl);
-            }
-            currentModalUrl = imageData.url;
-            modalImage.src = currentModalUrl;
-            modalCaption.textContent = imageData.original_name || imageData.filename;
+        function openImageModal(imageUrl, imageName) {
+            currentModalUrl = imageUrl;
+            modalImage.src = imageUrl;
+            modalCaption.textContent = imageName;
             modal.classList.add('open');
         }
 
@@ -344,8 +300,7 @@
         function renderGallery(images) {
             const gallery = document.getElementById('gallery');
             gallery.innerHTML = '';
-
-            if (!images.length) {
+            if (!images || !images.length) {
                 updateStatus('No uploaded images found for this field.');
                 gallery.innerHTML = '<div class="empty-state">No images in this field yet.</div>';
                 return;
@@ -357,50 +312,60 @@
                 const card = document.createElement('div');
                 card.className = 'thumb-card';
 
+                const imageUrl = imageData.url || imageData.dataUrl || '';
                 const img = document.createElement('img');
                 img.className = 'thumb-image';
-                img.alt = imageData.original_name || imageData.filename;
-                img.src = getImageUrl(imageData.filename);
+                img.alt = imageData.name;
+                img.src = imageUrl;
 
                 const caption = document.createElement('div');
                 caption.className = 'thumb-caption';
-                caption.textContent = imageData.original_name || imageData.filename;
+                caption.textContent = imageData.name;
 
                 card.appendChild(img);
                 card.appendChild(caption);
-                card.addEventListener('click', () => openImageModal({
-                    url: getImageUrl(imageData.filename),
-                    original_name: imageData.original_name || imageData.filename
-                }));
+                card.addEventListener('click', () => openImageModal(imageUrl, imageData.name));
 
                 gallery.appendChild(card);
-
                 if (index === 0) {
                     card.scrollIntoView({ block: 'nearest' });
                 }
             });
         }
 
-        function handleFileUpload(files) {
+        async function loadFarmAndFieldNames() {
+            const farm = await fetchFarm(farmId);
+            const field = await fetchField(fieldId);
+            if (!farm || !field) {
+                throw new Error('Invalid farm or field');
+            }
+            document.getElementById('farm-name').textContent = farm.name;
+            document.getElementById('back-link').href = `fields.html?farmId=${encodeURIComponent(farmId)}`;
+            document.getElementById('field-name').textContent = field.name;
+            document.getElementById('page-title').textContent = field.name;
+        }
+
+        async function loadImages() {
+            const images = await fetchImages(fieldId);
+            renderGallery(images || []);
+        }
+
+        async function handleFileUpload(files) {
             const list = Array.from(files || []);
             if (!list.length) {
                 updateStatus('No files selected.', true);
                 return;
             }
 
-            Promise.all(list.map(file => uploadImage(fieldId, file)))
-                .then(() => fetchImages(fieldId))
-                .then(images => {
-                    renderGallery(images);
-                    updateStatus(`${list.length} image${list.length === 1 ? '' : 's'} uploaded successfully.`);
-                })
-                .catch(err => {
-                    console.error(err);
-                    updateStatus('Unable to upload image(s).', true);
-                });
+            try {
+                await Promise.all(list.map(file => uploadImage(fieldId, file)));
+                await loadImages();
+                updateStatus(`${list.length} image${list.length === 1 ? '' : 's'} uploaded successfully.`);
+            } catch (err) {
+                console.error(err);
+                updateStatus('Unable to upload image(s).', true);
+            }
         }
-
-        modalClose.addEventListener('click', closeImageModal);
 
         modal.addEventListener('click', event => {
             if (event.target === modal) {
@@ -419,7 +384,7 @@
             event.target.value = '';
         });
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             farmId = getQueryParam('farmId');
             fieldId = getQueryParam('fieldId');
 
@@ -429,17 +394,13 @@
                 return;
             }
 
-            loadFarmAndFieldNames().catch(err => {
+            try {
+                await loadFarmAndFieldNames();
+                await loadImages();
+            } catch (err) {
                 console.error(err);
-                updateStatus('Unable to load farm or field names.', true);
-            });
-
-            fetchImages(fieldId)
-                .then(images => renderGallery(images))
-                .catch(err => {
-                    console.error(err);
-                    updateStatus('Unable to load images for this field.', true);
-                });
+                updateStatus('Unable to load field details.', true);
+            }
         });
     </script>
 </body>

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beechland Farms - Drone Images</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="supabase.js"></script>
     <style>
         * {
             margin: 0;
@@ -226,7 +228,38 @@
     </div>
 
     <script>
-        const apiBase = '/api';
+        async function renderFarmsList(farms) {
+            const container = document.getElementById('farms-container');
+            container.innerHTML = '';
+            if (!farms.length) {
+                container.innerHTML = '<div class="empty-state">No farms yet. Add one to get started!</div>';
+                return;
+            }
+
+            farms.forEach(farm => {
+                const card = document.createElement('div');
+                card.className = 'farm-card';
+
+                const header = document.createElement('div');
+                header.className = 'farm-header';
+
+                const title = document.createElement('div');
+                title.className = 'farm-title';
+                title.textContent = farm.name || 'Unnamed Farm';
+                header.appendChild(title);
+
+                const linkRow = document.createElement('div');
+                linkRow.className = 'farm-link-row';
+                const link = document.createElement('a');
+                link.className = 'btn-small';
+                link.href = `fields.html?farmId=${encodeURIComponent(farm.id)}`;
+                link.textContent = 'View Fields';
+                linkRow.appendChild(link);
+                card.appendChild(header);
+                card.appendChild(linkRow);
+                container.appendChild(card);
+            });
+        }
 
         async function addFarm() {
             const input = document.getElementById('farm-name-input');
@@ -237,31 +270,32 @@
             }
 
             try {
-                const response = await fetch(`${apiBase}/farms`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name: farmName })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Unable to create farm');
-                }
-
+                await createFarm(farmName);
                 input.value = '';
                 window.location.href = 'farms.html';
-            } catch (err) {
-                console.error(err);
-                alert('Unable to create farm. Make sure the backend server is running.');
+            } catch (error) {
+                console.error(error);
+                alert('Unable to save farm: ' + normalizeError(error));
             }
         }
 
-        const addBtn = document.getElementById('add-farm-btn');
-        addBtn.addEventListener('click', addFarm);
-        document.getElementById('farm-name-input').addEventListener('keypress', event => {
-            if (event.key === 'Enter') addFarm();
+        window.addEventListener('load', async () => {
+            try {
+                const farms = await fetchFarms();
+                await renderFarmsList(farms);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('farms-container').innerHTML = '<div class="empty-state">Unable to load farms.</div>';
+            }
+
+            const addBtn = document.getElementById('add-farm-btn');
+            addBtn.addEventListener('click', addFarm);
+            document.getElementById('farm-name-input').addEventListener('keypress', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addFarm();
+                }
+            });
         });
     </script>
 </body>
