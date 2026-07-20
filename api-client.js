@@ -1,10 +1,20 @@
+const API_BASE_URL = window.location.protocol.startsWith('http') ? '' : 'http://localhost:8000';
+
 async function apiFetch(path, options = {}) {
-    const response = await fetch(path, options);
+    const response = await fetch(API_BASE_URL + path, options);
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
+    let payload = null;
+
+    if (text) {
+        try {
+            payload = JSON.parse(text);
+        } catch (_) {
+            payload = null;
+        }
+    }
 
     if (!response.ok) {
-        const message = payload?.error || payload?.message || `Request failed with status ${response.status}`;
+        const message = payload?.error || payload?.message || text || `Request failed with status ${response.status}`;
         throw new Error(message);
     }
 

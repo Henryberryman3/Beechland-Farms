@@ -511,18 +511,23 @@
                 return;
             }
             const uploads = pendingUploads.slice();
-            pendingUploads = [];
-            renderUploadList();
+            let createdFields = [];
             try {
-                await Promise.all(uploads.map(async upload => {
+                for (const upload of uploads) {
                     const field = await createField(currentFarmId, upload.fieldName);
+                    createdFields.push(field.id);
                     await uploadImage(field.id, upload.file);
-                }));
+                }
+                pendingUploads = [];
+                renderUploadList();
                 await loadFields();
                 updateStatus(`${uploads.length} field${uploads.length === 1 ? '' : 's'} created from uploads.`);
             } catch (err) {
                 console.error(err);
-                updateStatus('Unable to create fields from uploaded images.', true);
+                await Promise.all(createdFields.map(id => deleteField(id).catch(() => {})));
+                pendingUploads = uploads;
+                renderUploadList();
+                updateStatus(`Unable to create fields from uploaded images: ${normalizeError(err)}`, true);
             }
         }
 

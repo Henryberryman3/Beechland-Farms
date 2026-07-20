@@ -228,6 +228,7 @@ class BackendHandler(SimpleHTTPRequestHandler):
             environ={
                 'REQUEST_METHOD': 'POST',
                 'CONTENT_TYPE': content_type,
+                'CONTENT_LENGTH': self.headers.get('Content-Length', '')
             }
         )
         field_id = form.getvalue('field_id')
