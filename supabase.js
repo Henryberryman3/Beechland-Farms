@@ -6,9 +6,9 @@ const supabase = typeof createClient === 'function'
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
-const localFarmsKey = 'beechland-farms';
-const localFieldsKey = 'beechland-fields';
-const localImagesKey = 'beechland-images';
+const localFarmsKey = 'new-folder-farms';
+const localFieldsKey = 'new-folder-fields';
+const localImagesKey = 'new-folder-images';
 
 function hasSupabaseConfig() {
     return SUPABASE_URL && SUPABASE_URL.indexOf('your-project') === -1
