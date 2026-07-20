@@ -295,20 +295,11 @@
     </div>
 
     <script>
-        const farmsDbName = 'BeechlandFarmsDB';
-        const farmsStoreName = 'farms';
-        const imagesDbName = 'BeechlandFieldImagesDB';
-        const imagesStoreName = 'images';
-
-        let farmsDb;
-        let imagesDb;
+        const apiBase = '/api';
         let currentFarmId;
         let pendingUploads = [];
         let selectedFieldIds = new Set();
-
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).slice(2);
-        }
+        let currentFields = [];
 
         function escapeHtml(value) {
             return String(value)
@@ -359,101 +350,59 @@
             return `${datePart} ${timePart}${suffix}`;
         }
 
-        function openFarmsDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(farmsDbName, 1);
-                request.onerror = () => reject(new Error('Unable to open farms DB'));
-                request.onsuccess = event => {
-                    farmsDb = event.target.result;
-                    resolve();
-                };
-                request.onupgradeneeded = event => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(farmsStoreName)) {
-                        db.createObjectStore(farmsStoreName, { keyPath: 'id' });
-                    }
-                };
-            });
-        }
-
-        function openImagesDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(imagesDbName, 2);
-                request.onerror = () => reject(new Error('Unable to open images DB'));
-                request.onsuccess = event => {
-                    imagesDb = event.target.result;
-                    resolve();
-                };
-                request.onupgradeneeded = event => {
-                    const db = event.target.result;
-                    let store;
-                    if (!db.objectStoreNames.contains(imagesStoreName)) {
-                        store = db.createObjectStore(imagesStoreName, { keyPath: 'id' });
-                    } else {
-                        store = event.target.transaction.objectStore(imagesStoreName);
-                    }
-                    if (store.indexNames && !store.indexNames.contains('fieldId')) {
-                        store.createIndex('fieldId', 'fieldId', { unique: false });
-                    }
-                };
-            });
-        }
-
-        function getAllFarms() {
-            return new Promise((resolve, reject) => {
-                const tx = farmsDb.transaction(farmsStoreName, 'readonly');
-                const store = tx.objectStore(farmsStoreName);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(new Error('Unable to load farms'));
-            });
-        }
-
-        function saveFarm(farm) {
-            return new Promise((resolve, reject) => {
-                const tx = farmsDb.transaction(farmsStoreName, 'readwrite');
-                const store = tx.objectStore(farmsStoreName);
-                const request = store.put(farm);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(new Error('Unable to save farm'));
-            });
-        }
-
-        function saveFieldImage(imageData) {
-            return new Promise((resolve, reject) => {
-                const tx = imagesDb.transaction(imagesStoreName, 'readwrite');
-                const store = tx.objectStore(imagesStoreName);
-                const request = store.put(imageData);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(new Error('Unable to save field image'));
-            });
-        }
-
-        function deleteImagesByField(fieldId) {
-            return new Promise((resolve, reject) => {
-                const tx = imagesDb.transaction(imagesStoreName, 'readwrite');
-                const store = tx.objectStore(imagesStoreName);
-                let cursorRequest;
-
-                if (store.indexNames.contains('fieldId')) {
-                    cursorRequest = store.index('fieldId').openCursor(IDBKeyRange.only(fieldId));
-                } else {
-                    cursorRequest = store.openCursor();
+        function fetchJson(url, options) {
+            return fetch(url, options).then(async response => {
+                const body = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(body.error || 'Request failed');
                 }
+                return body;
+            });
+        }
 
-                cursorRequest.onsuccess = event => {
-                    const cursor = event.target.result;
-                    if (!cursor) {
-                        resolve();
-                        return;
-                    }
+        function fetchFarm(farmId) {
+            return fetchJson(`${apiBase}/farm?farmId=${encodeURIComponent(farmId)}`);
+        }
 
-                    if (store.indexNames.contains('fieldId') || cursor.value.fieldId === fieldId) {
-                        cursor.delete();
-                    }
-                    cursor.continue();
-                };
-                cursorRequest.onerror = () => reject(new Error('Unable to delete field images'));
+        function fetchFields(farmId) {
+            return fetchJson(`${apiBase}/fields?farmId=${encodeURIComponent(farmId)}`);
+        }
+
+        function createField(farmId, name) {
+            return fetchJson(`${apiBase}/fields`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ farmId, name })
+            });
+        }
+
+        function uploadImage(fieldId, file) {
+            const formData = new FormData();
+            formData.append('fieldId', fieldId);
+            formData.append('image', file, file.name);
+            return fetchJson(`${apiBase}/images`, {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        function deleteField(fieldId) {
+            return fetchJson(`${apiBase}/fields/${encodeURIComponent(fieldId)}`, {
+                method: 'DELETE'
+            });
+        }
+
+        function renameField(fieldId, name) {
+            return fetchJson(`${apiBase}/fields/${encodeURIComponent(fieldId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+        }
+
+        function deleteImages(fieldId) {
+            return fetchJson(`${apiBase}/images?fieldId=${encodeURIComponent(fieldId)}`, {
+                method: 'DELETE'
             });
         }
 
@@ -472,10 +421,9 @@
             `).join('');
         }
 
-        function renderFieldsList(farm) {
+        function renderFieldsList(fields) {
             const list = document.getElementById('fields-list');
-            const fields = farm.fields || [];
-
+            currentFields = fields;
             const validFieldIds = new Set(fields.map(field => field.id));
             selectedFieldIds = new Set([...selectedFieldIds].filter(id => validFieldIds.has(id)));
 
@@ -505,17 +453,14 @@
                     const action = button.getAttribute('data-action');
                     const fieldId = button.getAttribute('data-field-id');
                     if (!fieldId) return;
-
                     if (action === 'view') {
                         window.location.href = `field.html?farmId=${currentFarmId}&fieldId=${fieldId}`;
                         return;
                     }
-
                     if (action === 'rename') {
                         renameFieldById(fieldId);
                         return;
                     }
-
                     if (action === 'delete') {
                         deleteFieldById(fieldId);
                     }
@@ -526,13 +471,11 @@
                 checkbox.addEventListener('change', () => {
                     const fieldId = checkbox.getAttribute('data-field-select-id');
                     if (!fieldId) return;
-
                     if (checkbox.checked) {
                         selectedFieldIds.add(fieldId);
                     } else {
                         selectedFieldIds.delete(fieldId);
                     }
-
                     updateBulkDeleteControls();
                 });
             });
@@ -544,7 +487,6 @@
             const button = document.getElementById('delete-selected-btn');
             const countNode = document.getElementById('selection-count');
             if (!button || !countNode) return;
-
             const count = selectedFieldIds.size;
             button.disabled = count === 0;
             countNode.textContent = `${count} selected`;
@@ -552,17 +494,17 @@
         }
 
         function loadFarm() {
-            return getAllFarms().then(farms => {
-                const farm = farms.find(item => item.id === currentFarmId);
-                if (!farm) {
-                    throw new Error('Farm not found');
-                }
-
-                if (!farm.fields) farm.fields = [];
+            return fetchFarm(currentFarmId).then(farm => {
                 document.getElementById('page-title').textContent = `${farm.name} Fields`;
                 document.getElementById('header-subtitle').textContent = `${farm.name} - Fields`;
-                renderFieldsList(farm);
                 return farm;
+            });
+        }
+
+        function loadFields() {
+            return fetchFields(currentFarmId).then(fields => {
+                renderFieldsList(fields);
+                return fields;
             });
         }
 
@@ -571,34 +513,16 @@
                 updateStatus('Select one or more images first.', true);
                 return;
             }
-
-            loadFarm()
-                .then(farm => {
-                    const entries = pendingUploads.map(upload => ({
-                        file: upload.file,
-                        fieldName: upload.fieldName
-                    }));
-
-                    const imageSaves = entries.map((entry, index) => {
-                        const newFieldId = generateId();
-                        farm.fields.push({ id: newFieldId, name: entry.fieldName });
-
-                        return saveFieldImage({
-                            id: generateId(),
-                            name: formatImageDateLabel(entry.file, index),
-                            fieldId: newFieldId,
-                            blob: entry.file
-                        });
-                    });
-
-                    return Promise.all(imageSaves)
-                        .then(() => saveFarm(farm))
-                        .then(() => {
-                            pendingUploads = [];
-                            renderUploadList();
-                            renderFieldsList(farm);
-                            updateStatus(`${entries.length} field${entries.length === 1 ? '' : 's'} created from uploads.`);
-                        });
+            const uploads = pendingUploads.slice();
+            pendingUploads = [];
+            renderUploadList();
+            Promise.all(uploads.map(upload =>
+                createField(currentFarmId, upload.fieldName)
+                    .then(field => uploadImage(field.id, upload.file))
+            ))
+                .then(() => loadFields())
+                .then(fields => {
+                    updateStatus(`${uploads.length} field${uploads.length === 1 ? '' : 's'} created from uploads.`);
                 })
                 .catch(err => {
                     console.error(err);
@@ -607,44 +531,28 @@
         }
 
         function renameFieldById(fieldId) {
-            loadFarm()
-                .then(farm => {
-                    const field = (farm.fields || []).find(item => item.id === fieldId);
-                    if (!field) return;
-
-                    const nextName = prompt('Rename field:', field.name);
-                    if (nextName === null) return;
-
-                    const trimmed = nextName.trim();
-                    if (!trimmed) {
-                        updateStatus('Field name cannot be empty.', true);
-                        return;
-                    }
-
-                    field.name = trimmed;
-                    saveFarm(farm)
-                        .then(() => {
-                            renderFieldsList(farm);
-                            updateStatus('Field renamed.');
-                        })
-                        .catch(() => updateStatus('Unable to rename field.', true));
-                })
-                .catch(() => updateStatus('Unable to load farm for rename.', true));
+            const field = currentFields.find(item => item.id === fieldId);
+            if (!field) return;
+            const nextName = prompt('Rename field:', field.name);
+            if (nextName === null) return;
+            const trimmed = nextName.trim();
+            if (!trimmed) {
+                updateStatus('Field name cannot be empty.', true);
+                return;
+            }
+            renameField(fieldId, trimmed)
+                .then(() => loadFields())
+                .then(() => updateStatus('Field renamed.'))
+                .catch(() => updateStatus('Unable to rename field.', true));
         }
 
         function deleteFieldById(fieldId) {
             if (!confirm('Delete this field and all its images?')) return;
-
-            loadFarm()
-                .then(farm => {
-                    farm.fields = (farm.fields || []).filter(field => field.id !== fieldId);
-                    return deleteImagesByField(fieldId)
-                        .then(() => saveFarm(farm))
-                        .then(() => {
-                            selectedFieldIds.delete(fieldId);
-                            renderFieldsList(farm);
-                            updateStatus('Field deleted.');
-                        });
+            deleteField(fieldId)
+                .then(() => loadFields())
+                .then(() => {
+                    selectedFieldIds.delete(fieldId);
+                    updateStatus('Field deleted.');
                 })
                 .catch(() => updateStatus('Unable to delete field.', true));
         }
@@ -652,30 +560,23 @@
         function deleteSelectedFields() {
             const ids = Array.from(selectedFieldIds);
             if (!ids.length) return;
-
             if (!confirm(`Delete ${ids.length} selected field${ids.length === 1 ? '' : 's'} and all their images?`)) return;
-
-            loadFarm()
-                .then(farm => {
-                    farm.fields = (farm.fields || []).filter(field => !selectedFieldIds.has(field.id));
-                    return Promise.all(ids.map(id => deleteImagesByField(id)))
-                        .then(() => saveFarm(farm))
-                        .then(() => {
-                            selectedFieldIds.clear();
-                            renderFieldsList(farm);
-                            updateStatus(`${ids.length} field${ids.length === 1 ? '' : 's'} deleted.`);
-                        });
+            Promise.all(ids.map(id => deleteField(id)))
+                .then(() => {
+                    selectedFieldIds.clear();
+                    return loadFields();
                 })
+                .then(() => updateStatus(`${ids.length} field${ids.length === 1 ? '' : 's'} deleted.`))
                 .catch(() => updateStatus('Unable to delete selected fields.', true));
         }
 
         function assignPendingUploadsWithAutoNames(files) {
-            return loadFarm().then(farm => {
-                const usedNumbers = getUsedFieldNumbers(farm.fields || []);
+            return loadFields().then(fields => {
+                const usedNumbers = getUsedFieldNumbers(fields);
                 pendingUploads = Array.from(files).map(file => {
                     const nextNumber = getNextUnusedFieldNumber(usedNumbers);
                     return {
-                        id: generateId(),
+                        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
                         file,
                         fieldName: `Field ${nextNumber}`
                     };
@@ -693,7 +594,6 @@
                 updateStatus('No files selected.');
                 return;
             }
-
             assignPendingUploadsWithAutoNames(files)
                 .catch(() => updateStatus('Unable to auto-name pending fields.', true));
         });
@@ -714,15 +614,15 @@
                 window.location.href = 'index.html';
                 return;
             }
-
-            Promise.all([openFarmsDB(), openImagesDB()])
-                .then(() => loadFarm())
-                .then(() => updateStatus('Ready to create fields from images.'))
-                .catch(err => {
-                    console.error(err);
-                    alert('Unable to load fields page.');
-                    window.location.href = 'index.html';
-                });
+            loadFarm().catch(err => {
+                console.error(err);
+                alert('Unable to load farm.');
+                window.location.href = 'index.html';
+            });
+            loadFields().catch(err => {
+                console.error(err);
+                updateStatus('Unable to load fields.', true);
+            });
         });
     </script>
 </body>

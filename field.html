@@ -232,7 +232,7 @@
                 <a href="index.html">Home</a>
                 <a href="farms.html">Farms</a>
             </nav>
-            <a href="farms.html" class="btn-back">Back to Farms</a>
+            <a id="back-link" href="farms.html" class="btn-back">Back to Farms</a>
         </div>
     </header>
 
@@ -264,9 +264,6 @@
     </div>
 
     <script>
-        const dbName = 'BeechlandFieldImagesDB';
-        const storeName = 'images';
-        let db;
         let farmId = null;
         let fieldId = null;
         let currentModalUrl = null;
@@ -274,7 +271,8 @@
         const modal = document.getElementById('image-modal');
         const modalImage = document.getElementById('modal-image');
         const modalCaption = document.getElementById('modal-caption');
-        const modalClose = document.getElementById('modal-close');
+
+        const apiBase = '/api';
 
         function getQueryParam(name) {
             const params = new URLSearchParams(window.location.search);
@@ -287,142 +285,60 @@
             node.style.color = error ? '#c0392b' : '#555';
         }
 
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(dbName, 2);
-                request.onupgradeneeded = event => {
-                    const database = event.target.result;
-                    let store;
-                    if (!database.objectStoreNames.contains(storeName)) {
-                        store = database.createObjectStore(storeName, { keyPath: 'id' });
-                    } else {
-                        store = event.target.transaction.objectStore(storeName);
-                    }
-                    if (store.indexNames && !store.indexNames.contains('fieldId')) {
-                        store.createIndex('fieldId', 'fieldId', { unique: false });
-                    }
-                };
-                request.onsuccess = event => {
-                    db = event.target.result;
-                    resolve();
-                };
-                request.onerror = () => reject(new Error('Database open failed'));
-            });
-        }
-
-        function getImagesByField() {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-                let request;
-
-                if (store.indexNames && store.indexNames.contains('fieldId')) {
-                    request = store.index('fieldId').getAll(fieldId);
-                } else {
-                    request = store.getAll();
+        function fetchJson(url, options) {
+            return fetch(url, options).then(async response => {
+                const body = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(body.error || 'Request failed');
                 }
-
-                request.onsuccess = event => {
-                    const results = event.target.result || [];
-                    if (store.indexNames && store.indexNames.contains('fieldId')) {
-                        resolve(results);
-                    } else {
-                        resolve(results.filter(item => item.fieldId === fieldId));
-                    }
-                };
-                request.onerror = () => reject(new Error('Image load failed'));
+                return body;
             });
         }
 
-        function saveImage(imageData) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                const request = store.put(imageData);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(new Error('Image save failed'));
+        function fetchImages(fieldId) {
+            return fetchJson(`${apiBase}/images?fieldId=${encodeURIComponent(fieldId)}`);
+        }
+
+        function uploadImage(fieldId, file) {
+            const formData = new FormData();
+            formData.append('fieldId', fieldId);
+            formData.append('image', file, file.name);
+            return fetchJson(`${apiBase}/images`, {
+                method: 'POST',
+                body: formData
             });
-        }
-
-        function formatImageDateLabel(batchIndex) {
-            const now = new Date();
-            const datePart = now.toLocaleDateString();
-            const timePart = now.toLocaleTimeString();
-            const suffix = batchIndex > 0 ? ` #${batchIndex + 1}` : '';
-            return `${datePart} ${timePart}${suffix}`;
-        }
-
-        function handleFileUpload(files) {
-            const list = Array.from(files || []);
-            if (!list.length) {
-                updateStatus('No files selected.', true);
-                return;
-            }
-
-            Promise.all(list.map((file, index) => {
-                return saveImage({
-                    id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
-                    name: formatImageDateLabel(index),
-                    fieldId,
-                    blob: file
-                });
-            }))
-                .then(() => getImagesByField())
-                .then(images => {
-                    renderGallery(images);
-                    updateStatus(`${list.length} image${list.length === 1 ? '' : 's'} uploaded with timestamps.`);
-                })
-                .catch(err => {
-                    console.error(err);
-                    updateStatus('Unable to upload image(s).', true);
-                });
         }
 
         function loadFarmAndFieldNames() {
-            return new Promise(resolve => {
-                const request = indexedDB.open('BeechlandFarmsDB', 1);
-                request.onsuccess = event => {
-                    const farmsDb = event.target.result;
-                    const tx = farmsDb.transaction('farms', 'readonly');
-                    const store = tx.objectStore('farms');
-                    const allReq = store.getAll();
+            return fetchJson(`${apiBase}/farm?farmId=${encodeURIComponent(farmId)}`)
+                .then(farm => {
+                    document.getElementById('farm-name').textContent = farm.name;
+                    document.getElementById('back-link').href = `fields.html?farmId=${farmId}`;
+                    return fetchJson(`${apiBase}/field?fieldId=${encodeURIComponent(fieldId)}`);
+                })
+                .then(field => {
+                    document.getElementById('field-name').textContent = field.name;
+                    document.getElementById('page-title').textContent = field.name;
+                });
+        }
 
-                    allReq.onsuccess = () => {
-                        const farms = allReq.result || [];
-                        const farm = farms.find(item => item.id === farmId);
-                        const farmName = farm ? farm.name : 'Unknown Farm';
-                        const field = farm ? (farm.fields || []).find(item => item.id === fieldId) : null;
-                        const fieldName = field ? field.name : 'Field';
-
-                        document.getElementById('farm-name').textContent = farmName;
-                        document.getElementById('field-name').textContent = fieldName;
-                        document.getElementById('page-title').textContent = `${farmName} > ${fieldName}`;
-                        document.getElementById('back-link').href = `fields.html?farmId=${farmId}`;
-                        resolve();
-                    };
-
-                    allReq.onerror = () => resolve();
-                };
-                request.onerror = () => resolve();
-            });
+        function getImageUrl(filename) {
+            return `uploads/${encodeURIComponent(filename)}`;
         }
 
         function openImageModal(imageData) {
             if (currentModalUrl) {
                 URL.revokeObjectURL(currentModalUrl);
             }
-            currentModalUrl = URL.createObjectURL(imageData.blob);
+            currentModalUrl = imageData.url;
             modalImage.src = currentModalUrl;
-            modalCaption.textContent = imageData.name;
+            modalCaption.textContent = imageData.original_name || imageData.filename;
             modal.classList.add('open');
         }
 
         function closeImageModal() {
             modal.classList.remove('open');
-            if (currentModalUrl) {
-                URL.revokeObjectURL(currentModalUrl);
-                currentModalUrl = null;
-            }
+            currentModalUrl = null;
         }
 
         function renderGallery(images) {
@@ -443,18 +359,19 @@
 
                 const img = document.createElement('img');
                 img.className = 'thumb-image';
-                img.alt = imageData.name;
-                const thumbUrl = URL.createObjectURL(imageData.blob);
-                img.src = thumbUrl;
-                img.addEventListener('load', () => URL.revokeObjectURL(thumbUrl));
+                img.alt = imageData.original_name || imageData.filename;
+                img.src = getImageUrl(imageData.filename);
 
                 const caption = document.createElement('div');
                 caption.className = 'thumb-caption';
-                caption.textContent = imageData.name;
+                caption.textContent = imageData.original_name || imageData.filename;
 
                 card.appendChild(img);
                 card.appendChild(caption);
-                card.addEventListener('click', () => openImageModal(imageData));
+                card.addEventListener('click', () => openImageModal({
+                    url: getImageUrl(imageData.filename),
+                    original_name: imageData.original_name || imageData.filename
+                }));
 
                 gallery.appendChild(card);
 
@@ -462,6 +379,25 @@
                     card.scrollIntoView({ block: 'nearest' });
                 }
             });
+        }
+
+        function handleFileUpload(files) {
+            const list = Array.from(files || []);
+            if (!list.length) {
+                updateStatus('No files selected.', true);
+                return;
+            }
+
+            Promise.all(list.map(file => uploadImage(fieldId, file)))
+                .then(() => fetchImages(fieldId))
+                .then(images => {
+                    renderGallery(images);
+                    updateStatus(`${list.length} image${list.length === 1 ? '' : 's'} uploaded successfully.`);
+                })
+                .catch(err => {
+                    console.error(err);
+                    updateStatus('Unable to upload image(s).', true);
+                });
         }
 
         modalClose.addEventListener('click', closeImageModal);
@@ -493,10 +429,12 @@
                 return;
             }
 
-            loadFarmAndFieldNames();
+            loadFarmAndFieldNames().catch(err => {
+                console.error(err);
+                updateStatus('Unable to load farm or field names.', true);
+            });
 
-            openDB()
-                .then(() => getImagesByField())
+            fetchImages(fieldId)
                 .then(images => renderGallery(images))
                 .catch(err => {
                     console.error(err);

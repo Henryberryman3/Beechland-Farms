@@ -170,54 +170,25 @@
     </div>
 
     <script>
-        const dbName = 'BeechlandFarmsDB';
-        const storeName = 'farms';
-        let db;
+        const apiBase = '/api';
 
-        function openDBFarms() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(dbName, 1);
-                request.onerror = () => reject(new Error('DB open failed'));
-                request.onsuccess = event => {
-                    db = event.target.result;
-                    resolve(db);
-                };
-                request.onupgradeneeded = event => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName, { keyPath: 'id' });
-                    }
-                };
-            });
-        }
-
-        function getAllFarms() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(storeName, 'readonly');
-                const store = transaction.objectStore(storeName);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(new Error('Load failed'));
-            });
+        async function fetchFarms() {
+            const response = await fetch(`${apiBase}/farms`);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Unable to load farms');
+            }
+            return response.json();
         }
 
         function createFarmCard(farm) {
             const card = document.createElement('div');
             card.className = 'farm-card';
-            const del = document.createElement('button');
-            del.className = 'farm-delete';
-            del.type = 'button';
-            del.title = 'Delete farm';
-            del.textContent = '×';
-            del.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (!confirm(`Delete farm "${farm.name}"? This cannot be undone.`)) return;
-                deleteFarm(farm.id, card).catch(err => console.error('Delete failed', err));
-            });
-            card.appendChild(del);
+
             const title = document.createElement('h2');
             title.textContent = farm.name || 'Unnamed Farm';
             card.appendChild(title);
+
             const p = document.createElement('p');
             const link = document.createElement('a');
             link.className = 'back-link';
@@ -230,19 +201,6 @@
             p.appendChild(link);
             card.appendChild(p);
             return card;
-        }
-
-        function deleteFarm(farmId, card) {
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                const req = store.delete(farmId);
-                req.onsuccess = () => {
-                    if (card && card.parentNode) card.parentNode.removeChild(card);
-                    resolve();
-                };
-                req.onerror = () => reject(new Error('Delete failed'));
-            });
         }
 
         function renderFarmsList(farms) {
@@ -261,24 +219,22 @@
         function showDebug(farms) {
             const out = document.getElementById('debug-output');
             if (!out) return;
-            out.textContent = `Farms in DB: ${farms.length}\n` + JSON.stringify(farms.map(f => ({ id: f.id, name: f.name })), null, 2);
+            out.textContent = `Farms loaded from backend: ${farms.length}\n` + JSON.stringify(farms.map(f => ({ id: f.id, name: f.name })), null, 2);
         }
 
-        function loadAndRender() {
-            openDBFarms()
-                .then(() => getAllFarms())
-                .then(farms => {
-                    console.log('Loaded farms count:', farms.length);
-                    renderFarmsList(farms);
-                    showDebug(farms);
-                })
-                .catch(err => {
-                    console.error('Failed loading farms:', err);
-                    const container = document.getElementById('farms-list');
-                    if (container) container.innerHTML = `<div class="empty-state">Error loading farms: ${err.message}</div>`;
-                    const out = document.getElementById('debug-output');
-                    if (out) out.textContent = `Error: ${err.message}`;
-                });
+        async function loadAndRender() {
+            try {
+                const farms = await fetchFarms();
+                console.log('Loaded farms count:', farms.length);
+                renderFarmsList(farms);
+                showDebug(farms);
+            } catch (err) {
+                console.error('Failed loading farms:', err);
+                const container = document.getElementById('farms-list');
+                if (container) container.innerHTML = `<div class="empty-state">Error loading farms: ${err.message}</div>`;
+                const out = document.getElementById('debug-output');
+                if (out) out.textContent = `Error: ${err.message}`;
+            }
         }
 
         window.addEventListener('load', () => {

@@ -226,86 +226,42 @@
     </div>
 
     <script>
-        const dbName = 'BeechlandFarmsDB';
-        const storeName = 'farms';
-        let db;
+        const apiBase = '/api';
 
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(dbName, 1);
-                request.onerror = () => reject(new Error('DB open failed'));
-                request.onsuccess = event => {
-                    db = event.target.result;
-                    resolve(db);
-                };
-                request.onupgradeneeded = event => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName, { keyPath: 'id' });
-                    }
-                };
-            });
-        }
-
-        function saveFarm(farm) {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(storeName, 'readwrite');
-                transaction.oncomplete = () => resolve(farm);
-                transaction.onerror = () => reject(new Error('Save failed'));
-                const store = transaction.objectStore(storeName);
-                store.put(farm);
-            });
-        }
-
-        function getAllFarms() {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(storeName, 'readonly');
-                const store = transaction.objectStore(storeName);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(new Error('Load failed'));
-            });
-        }
-
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).slice(2);
-        }
-
-        // Home page does not render farms list; farms are shown on `farms.html`.
-
-        function addFarm() {
+        async function addFarm() {
             const input = document.getElementById('farm-name-input');
             const farmName = input.value.trim();
             if (!farmName) {
                 alert('Please enter a farm name');
                 return;
             }
-            const farm = {
-                id: generateId(),
-                name: farmName,
-                fields: []
-            };
-            saveFarm(farm).then(() => {
+
+            try {
+                const response = await fetch(`${apiBase}/farms`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: farmName })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Unable to create farm');
+                }
+
                 input.value = '';
-                // After adding, go to farms page so new farm appears there
                 window.location.href = 'farms.html';
-            });
+            } catch (err) {
+                console.error(err);
+                alert('Unable to create farm. Make sure the backend server is running.');
+            }
         }
 
-        // disable add button until DB is ready
         const addBtn = document.getElementById('add-farm-btn');
-        addBtn.disabled = true;
         addBtn.addEventListener('click', addFarm);
         document.getElementById('farm-name-input').addEventListener('keypress', event => {
             if (event.key === 'Enter') addFarm();
-        });
-
-        openDB().then(() => {
-            addBtn.disabled = false;
-            console.log('DB opened');
-        }).catch(err => {
-            console.error('Database error:', err);
-            alert('Storage not supported in this browser');
         });
     </script>
 </body>
