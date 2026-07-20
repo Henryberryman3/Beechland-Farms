@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beechland Farms - Drone Images</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f2f6ee;
+            color: #2d3a20;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .logo-name {
+            font-size: 1.6rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .logo-subtitle {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.85);
+            text-transform: capitalize;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #2d5016;
+            margin-bottom: 1.5rem;
+        }
+
+        .add-farm-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 14px;
+            border: 1px solid #d9e0c5;
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.06);
+            margin-bottom: 2rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #2d5016;
+            font-size: 0.95rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #d9e0c5;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: #a8d65e;
+            color: #2d5016;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #8bc34a;
+        }
+
+        .farms-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .farm-card {
+            background: white;
+            border: 1px solid #d9e0c5;
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.06);
+        }
+
+        .farm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e8edd5;
+        }
+
+        .farm-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d5016;
+        }
+
+        .farm-link-row {
+            margin-bottom: 1rem;
+        }
+
+        .btn-small {
+            background: #a8d65e;
+            color: #2d5016;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .btn-small:hover {
+            background: #8bc34a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7a51;
+            font-style: italic;
+        }
+
+
+        @media (max-width: 768px) {
+            .farm-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .form-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-group {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-name">🌾 Beechland Farms</div>
+                <div class="logo-subtitle">Drone Images</div>
+            </div>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="farms.html">Farms</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Manage Farms & Fields</h1>
+
+        <div class="add-farm-section">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="farm-name-input">New Farm Name</label>
+                    <input type="text" id="farm-name-input" placeholder="e.g., Moore Farm">
+                </div>
+                <button class="btn-primary" id="add-farm-btn">Add Farm</button>
+            </div>
+        </div>
+
+        <div class="farms-grid" id="farms-container">
+            <div class="empty-state">No farms yet. Add one to get started!</div>
+        </div>
+    </div>
+
+    <script>
+        const dbName = 'BeechlandFarmsDB';
+        const storeName = 'farms';
+        let db;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onerror = () => reject(new Error('DB open failed'));
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        function saveFarm(farm) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readwrite');
+                transaction.oncomplete = () => resolve(farm);
+                transaction.onerror = () => reject(new Error('Save failed'));
+                const store = transaction.objectStore(storeName);
+                store.put(farm);
+            });
+        }
+
+        function getAllFarms() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(new Error('Load failed'));
+            });
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2);
+        }
+
+        // Home page does not render farms list; farms are shown on `farms.html`.
+
+        function addFarm() {
+            const input = document.getElementById('farm-name-input');
+            const farmName = input.value.trim();
+            if (!farmName) {
+                alert('Please enter a farm name');
+                return;
+            }
+            const farm = {
+                id: generateId(),
+                name: farmName,
+                fields: []
+            };
+            saveFarm(farm).then(() => {
+                input.value = '';
+                // After adding, go to farms page so new farm appears there
+                window.location.href = 'farms.html';
+            });
+        }
+
+        // disable add button until DB is ready
+        const addBtn = document.getElementById('add-farm-btn');
+        addBtn.disabled = true;
+        addBtn.addEventListener('click', addFarm);
+        document.getElementById('farm-name-input').addEventListener('keypress', event => {
+            if (event.key === 'Enter') addFarm();
+        });
+
+        openDB().then(() => {
+            addBtn.disabled = false;
+            console.log('DB opened');
+        }).catch(err => {
+            console.error('Database error:', err);
+            alert('Storage not supported in this browser');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beechland Farms - Field Images</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f2f6ee;
+            color: #2d3a20;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.95rem;
+            color: #4a6a31;
+            flex-wrap: wrap;
+        }
+
+        .breadcrumb-sep {
+            color: #7f9069;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #2d5016;
+            margin-bottom: 0.9rem;
+        }
+
+        .lead {
+            color: #4a6a31;
+            margin-bottom: 1rem;
+        }
+
+        .upload-panel {
+            background: #fff;
+            border: 1px solid #d9e0c5;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-panel label {
+            display: block;
+            color: #2d5016;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-panel input[type="file"] {
+            width: 100%;
+        }
+
+        .status-text {
+            margin: 0.6rem 0 1.2rem;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+            margin-top: 1.2rem;
+        }
+
+        .thumb-card {
+            position: relative;
+            background: white;
+            border: 1px solid #d9e0c5;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(45, 80, 22, 0.08);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .thumb-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(45, 80, 22, 0.12);
+        }
+
+        .thumb-image {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            display: block;
+            background: #eef4e4;
+        }
+
+        .thumb-caption {
+            padding: 0.9rem 1rem 1.1rem;
+            font-size: 0.9rem;
+            color: #2d3a20;
+            font-weight: 600;
+            text-align: center;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .empty-state {
+            margin-top: 1rem;
+            background: #ffffff;
+            border: 1px solid #d9e0c5;
+            border-radius: 12px;
+            padding: 1.2rem;
+            text-align: center;
+            color: #6b7a51;
+            font-style: italic;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            z-index: 1000;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 95%;
+            max-height: 95%;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+        }
+
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-height: 80vh;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .modal-caption {
+            padding: 1rem 1.2rem;
+            font-weight: 700;
+            background: #f5f7f2;
+            color: #2d5016;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #2d5016;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-name">🌾 Beechland Farms</div>
+                <div class="logo-subtitle">Field Images</div>
+            </div>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="farms.html">Farms</a>
+            </nav>
+            <a href="farms.html" class="btn-back">Back to Farms</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <span>Farms</span>
+            <span class="breadcrumb-sep">></span>
+            <span id="farm-name">Loading...</span>
+            <span class="breadcrumb-sep">></span>
+            <span id="field-name">Loading...</span>
+        </div>
+
+        <h1 id="page-title">Field Images</h1>
+        <p class="lead">Viewing uploaded images for this field.</p>
+        <div class="upload-panel">
+            <label for="file-input">Upload more images to this field</label>
+            <input type="file" id="file-input" accept="image/*" multiple>
+        </div>
+        <div class="status-text" id="status-text">Loading images...</div>
+        <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="modal" id="image-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close" type="button">x</button>
+            <img id="modal-image" alt="Full size image">
+            <div class="modal-caption" id="modal-caption"></div>
+        </div>
+    </div>
+
+    <script>
+        const dbName = 'BeechlandFieldImagesDB';
+        const storeName = 'images';
+        let db;
+        let farmId = null;
+        let fieldId = null;
+        let currentModalUrl = null;
+
+        const modal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const modalCaption = document.getElementById('modal-caption');
+        const modalClose = document.getElementById('modal-close');
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        function updateStatus(message, error = false) {
+            const node = document.getElementById('status-text');
+            node.textContent = message;
+            node.style.color = error ? '#c0392b' : '#555';
+        }
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 2);
+                request.onupgradeneeded = event => {
+                    const database = event.target.result;
+                    let store;
+                    if (!database.objectStoreNames.contains(storeName)) {
+                        store = database.createObjectStore(storeName, { keyPath: 'id' });
+                    } else {
+                        store = event.target.transaction.objectStore(storeName);
+                    }
+                    if (store.indexNames && !store.indexNames.contains('fieldId')) {
+                        store.createIndex('fieldId', 'fieldId', { unique: false });
+                    }
+                };
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve();
+                };
+                request.onerror = () => reject(new Error('Database open failed'));
+            });
+        }
+
+        function getImagesByField() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                let request;
+
+                if (store.indexNames && store.indexNames.contains('fieldId')) {
+                    request = store.index('fieldId').getAll(fieldId);
+                } else {
+                    request = store.getAll();
+                }
+
+                request.onsuccess = event => {
+                    const results = event.target.result || [];
+                    if (store.indexNames && store.indexNames.contains('fieldId')) {
+                        resolve(results);
+                    } else {
+                        resolve(results.filter(item => item.fieldId === fieldId));
+                    }
+                };
+                request.onerror = () => reject(new Error('Image load failed'));
+            });
+        }
+
+        function saveImage(imageData) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                const request = store.put(imageData);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(new Error('Image save failed'));
+            });
+        }
+
+        function formatImageDateLabel(batchIndex) {
+            const now = new Date();
+            const datePart = now.toLocaleDateString();
+            const timePart = now.toLocaleTimeString();
+            const suffix = batchIndex > 0 ? ` #${batchIndex + 1}` : '';
+            return `${datePart} ${timePart}${suffix}`;
+        }
+
+        function handleFileUpload(files) {
+            const list = Array.from(files || []);
+            if (!list.length) {
+                updateStatus('No files selected.', true);
+                return;
+            }
+
+            Promise.all(list.map((file, index) => {
+                return saveImage({
+                    id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
+                    name: formatImageDateLabel(index),
+                    fieldId,
+                    blob: file
+                });
+            }))
+                .then(() => getImagesByField())
+                .then(images => {
+                    renderGallery(images);
+                    updateStatus(`${list.length} image${list.length === 1 ? '' : 's'} uploaded with timestamps.`);
+                })
+                .catch(err => {
+                    console.error(err);
+                    updateStatus('Unable to upload image(s).', true);
+                });
+        }
+
+        function loadFarmAndFieldNames() {
+            return new Promise(resolve => {
+                const request = indexedDB.open('BeechlandFarmsDB', 1);
+                request.onsuccess = event => {
+                    const farmsDb = event.target.result;
+                    const tx = farmsDb.transaction('farms', 'readonly');
+                    const store = tx.objectStore('farms');
+                    const allReq = store.getAll();
+
+                    allReq.onsuccess = () => {
+                        const farms = allReq.result || [];
+                        const farm = farms.find(item => item.id === farmId);
+                        const farmName = farm ? farm.name : 'Unknown Farm';
+                        const field = farm ? (farm.fields || []).find(item => item.id === fieldId) : null;
+                        const fieldName = field ? field.name : 'Field';
+
+                        document.getElementById('farm-name').textContent = farmName;
+                        document.getElementById('field-name').textContent = fieldName;
+                        document.getElementById('page-title').textContent = `${farmName} > ${fieldName}`;
+                        document.getElementById('back-link').href = `fields.html?farmId=${farmId}`;
+                        resolve();
+                    };
+
+                    allReq.onerror = () => resolve();
+                };
+                request.onerror = () => resolve();
+            });
+        }
+
+        function openImageModal(imageData) {
+            if (currentModalUrl) {
+                URL.revokeObjectURL(currentModalUrl);
+            }
+            currentModalUrl = URL.createObjectURL(imageData.blob);
+            modalImage.src = currentModalUrl;
+            modalCaption.textContent = imageData.name;
+            modal.classList.add('open');
+        }
+
+        function closeImageModal() {
+            modal.classList.remove('open');
+            if (currentModalUrl) {
+                URL.revokeObjectURL(currentModalUrl);
+                currentModalUrl = null;
+            }
+        }
+
+        function renderGallery(images) {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+
+            if (!images.length) {
+                updateStatus('No uploaded images found for this field.');
+                gallery.innerHTML = '<div class="empty-state">No images in this field yet.</div>';
+                return;
+            }
+
+            updateStatus(`${images.length} image${images.length === 1 ? '' : 's'} found. Click any image to open.`);
+
+            images.forEach((imageData, index) => {
+                const card = document.createElement('div');
+                card.className = 'thumb-card';
+
+                const img = document.createElement('img');
+                img.className = 'thumb-image';
+                img.alt = imageData.name;
+                const thumbUrl = URL.createObjectURL(imageData.blob);
+                img.src = thumbUrl;
+                img.addEventListener('load', () => URL.revokeObjectURL(thumbUrl));
+
+                const caption = document.createElement('div');
+                caption.className = 'thumb-caption';
+                caption.textContent = imageData.name;
+
+                card.appendChild(img);
+                card.appendChild(caption);
+                card.addEventListener('click', () => openImageModal(imageData));
+
+                gallery.appendChild(card);
+
+                if (index === 0) {
+                    card.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        }
+
+        modalClose.addEventListener('click', closeImageModal);
+
+        modal.addEventListener('click', event => {
+            if (event.target === modal) {
+                closeImageModal();
+            }
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && modal.classList.contains('open')) {
+                closeImageModal();
+            }
+        });
+
+        document.getElementById('file-input').addEventListener('change', event => {
+            handleFileUpload(event.target.files);
+            event.target.value = '';
+        });
+
+        window.addEventListener('load', () => {
+            farmId = getQueryParam('farmId');
+            fieldId = getQueryParam('fieldId');
+
+            if (!farmId || !fieldId) {
+                alert('Invalid farm or field');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            loadFarmAndFieldNames();
+
+            openDB()
+                .then(() => getImagesByField())
+                .then(images => renderGallery(images))
+                .catch(err => {
+                    console.error(err);
+                    updateStatus('Unable to load images for this field.', true);
+                });
+        });
+    </script>
+</body>
+</html>

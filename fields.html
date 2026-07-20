@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beechland Farms - Fields</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f2f6ee;
+            color: #2d3a20;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
+            color: #fff;
+            padding: 1.4rem 1.8rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .header-content {
+            max-width: 1150px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .header-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .header-subtitle {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.86);
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 2rem auto;
+            padding: 0 1.4rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #2d5016;
+            margin-bottom: 0.7rem;
+        }
+
+        .lead {
+            color: #4a6a31;
+            margin-bottom: 1.6rem;
+        }
+
+        .panel {
+            background: #fff;
+            border: 1px solid #d9e0c5;
+            border-radius: 14px;
+            padding: 1.3rem;
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.06);
+            margin-bottom: 1.2rem;
+        }
+
+        .upload-panel label {
+            display: block;
+            font-weight: 700;
+            color: #2d5016;
+            margin-bottom: 0.55rem;
+        }
+
+        .upload-panel input[type="file"] {
+            width: 100%;
+            margin-bottom: 0.7rem;
+        }
+
+        .upload-list {
+            display: grid;
+            gap: 0.55rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .upload-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.7rem;
+            align-items: center;
+        }
+
+        .upload-file {
+            color: #4a6a31;
+            font-size: 0.88rem;
+            word-break: break-word;
+        }
+
+        .upload-item input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d9e0c5;
+            border-radius: 6px;
+            font-size: 0.88rem;
+        }
+
+        .auto-field-name {
+            font-weight: 700;
+            color: #2d5016;
+            background: #eef4e2;
+            border: 1px solid #d9e0c5;
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-size: 0.88rem;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 7px;
+            padding: 0.55rem 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #a8d65e;
+            color: #2d5016;
+        }
+
+        .btn-primary:hover {
+            background: #8bc34a;
+        }
+
+        .btn-secondary {
+            background: #4a9eff;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #2e7fd1;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .status {
+            margin-top: 0.75rem;
+            color: #4a6a31;
+            font-size: 0.9rem;
+            min-height: 1.2rem;
+        }
+
+        .fields-list {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .fields-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .selection-count {
+            color: #4a6a31;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .field-item {
+            background: #f9fbf5;
+            border: 1px solid #e8edd5;
+            border-radius: 10px;
+            padding: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .field-name {
+            font-weight: 700;
+            color: #2d5016;
+        }
+
+        .field-main {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .field-select {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .field-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #6b7a51;
+            font-style: italic;
+            padding: 1rem 0.4rem;
+        }
+
+        @media (max-width: 768px) {
+            .upload-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-name">🌾 Beechland Farms</div>
+                <div class="logo-subtitle" id="header-subtitle">Fields</div>
+            </div>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="farms.html">Farms</a>
+            </nav>
+            <a href="farms.html" class="btn-back">Back to Farms</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 id="page-title">Farm Fields</h1>
+        <p class="lead">Upload one or more images. Every image creates a new field automatically, and you can rename any field at any time.</p>
+
+        <section class="panel upload-panel">
+            <label for="file-input">Upload image(s) to create field(s)</label>
+            <input type="file" id="file-input" accept="image/*" multiple>
+            <div class="upload-list" id="upload-list"></div>
+            <div class="button-row">
+                <button class="btn btn-primary" id="create-fields-btn" type="button">Create Field(s) From Uploads</button>
+                <button class="btn btn-danger" id="clear-pending-btn" type="button">Clear Pending Uploads</button>
+            </div>
+            <div class="status" id="status-text"></div>
+        </section>
+
+        <section class="panel">
+            <div class="fields-toolbar">
+                <h2 style="margin:0;color:#2d5016;">Fields</h2>
+                <div class="button-row" style="margin:0;">
+                    <div class="selection-count" id="selection-count">0 selected</div>
+                    <button class="btn btn-danger" id="delete-selected-btn" type="button" disabled>Delete Selected</button>
+                </div>
+            </div>
+            <div class="fields-list" id="fields-list"></div>
+        </section>
+    </div>
+
+    <script>
+        const farmsDbName = 'BeechlandFarmsDB';
+        const farmsStoreName = 'farms';
+        const imagesDbName = 'BeechlandFieldImagesDB';
+        const imagesStoreName = 'images';
+
+        let farmsDb;
+        let imagesDb;
+        let currentFarmId;
+        let pendingUploads = [];
+        let selectedFieldIds = new Set();
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        function getUsedFieldNumbers(fields) {
+            const used = new Set();
+            (fields || []).forEach(field => {
+                const match = /^field\s+(\d+)$/i.exec((field.name || '').trim());
+                if (match) {
+                    used.add(Number(match[1]));
+                }
+            });
+            return used;
+        }
+
+        function getNextUnusedFieldNumber(usedNumbers) {
+            let next = 1;
+            while (usedNumbers.has(next)) {
+                next += 1;
+            }
+            usedNumbers.add(next);
+            return next;
+        }
+
+        function updateStatus(message, isError = false) {
+            const node = document.getElementById('status-text');
+            node.textContent = message;
+            node.style.color = isError ? '#c0392b' : '#4a6a31';
+        }
+
+        function formatImageDateLabel(file, index) {
+            const timestamp = file && file.lastModified ? file.lastModified : Date.now();
+            const date = new Date(timestamp);
+            const datePart = date.toLocaleDateString();
+            const timePart = date.toLocaleTimeString();
+            const suffix = index > 0 ? ` #${index + 1}` : '';
+            return `${datePart} ${timePart}${suffix}`;
+        }
+
+        function openFarmsDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(farmsDbName, 1);
+                request.onerror = () => reject(new Error('Unable to open farms DB'));
+                request.onsuccess = event => {
+                    farmsDb = event.target.result;
+                    resolve();
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(farmsStoreName)) {
+                        db.createObjectStore(farmsStoreName, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        function openImagesDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(imagesDbName, 2);
+                request.onerror = () => reject(new Error('Unable to open images DB'));
+                request.onsuccess = event => {
+                    imagesDb = event.target.result;
+                    resolve();
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    let store;
+                    if (!db.objectStoreNames.contains(imagesStoreName)) {
+                        store = db.createObjectStore(imagesStoreName, { keyPath: 'id' });
+                    } else {
+                        store = event.target.transaction.objectStore(imagesStoreName);
+                    }
+                    if (store.indexNames && !store.indexNames.contains('fieldId')) {
+                        store.createIndex('fieldId', 'fieldId', { unique: false });
+                    }
+                };
+            });
+        }
+
+        function getAllFarms() {
+            return new Promise((resolve, reject) => {
+                const tx = farmsDb.transaction(farmsStoreName, 'readonly');
+                const store = tx.objectStore(farmsStoreName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(new Error('Unable to load farms'));
+            });
+        }
+
+        function saveFarm(farm) {
+            return new Promise((resolve, reject) => {
+                const tx = farmsDb.transaction(farmsStoreName, 'readwrite');
+                const store = tx.objectStore(farmsStoreName);
+                const request = store.put(farm);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(new Error('Unable to save farm'));
+            });
+        }
+
+        function saveFieldImage(imageData) {
+            return new Promise((resolve, reject) => {
+                const tx = imagesDb.transaction(imagesStoreName, 'readwrite');
+                const store = tx.objectStore(imagesStoreName);
+                const request = store.put(imageData);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(new Error('Unable to save field image'));
+            });
+        }
+
+        function deleteImagesByField(fieldId) {
+            return new Promise((resolve, reject) => {
+                const tx = imagesDb.transaction(imagesStoreName, 'readwrite');
+                const store = tx.objectStore(imagesStoreName);
+                let cursorRequest;
+
+                if (store.indexNames.contains('fieldId')) {
+                    cursorRequest = store.index('fieldId').openCursor(IDBKeyRange.only(fieldId));
+                } else {
+                    cursorRequest = store.openCursor();
+                }
+
+                cursorRequest.onsuccess = event => {
+                    const cursor = event.target.result;
+                    if (!cursor) {
+                        resolve();
+                        return;
+                    }
+
+                    if (store.indexNames.contains('fieldId') || cursor.value.fieldId === fieldId) {
+                        cursor.delete();
+                    }
+                    cursor.continue();
+                };
+                cursorRequest.onerror = () => reject(new Error('Unable to delete field images'));
+            });
+        }
+
+        function renderUploadList() {
+            const container = document.getElementById('upload-list');
+            if (!pendingUploads.length) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = pendingUploads.map(upload => `
+                <div class="upload-item">
+                    <div class="upload-file">${escapeHtml(upload.file.name)}</div>
+                    <div class="auto-field-name">${escapeHtml(upload.fieldName || '')}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderFieldsList(farm) {
+            const list = document.getElementById('fields-list');
+            const fields = farm.fields || [];
+
+            const validFieldIds = new Set(fields.map(field => field.id));
+            selectedFieldIds = new Set([...selectedFieldIds].filter(id => validFieldIds.has(id)));
+
+            if (!fields.length) {
+                selectedFieldIds.clear();
+                list.innerHTML = '<div class="empty-state">No fields yet. Upload an image to create your first field.</div>';
+                updateBulkDeleteControls();
+                return;
+            }
+
+            list.innerHTML = fields.map(field => `
+                <div class="field-item">
+                    <div class="field-main">
+                        <input class="field-select" type="checkbox" data-field-select-id="${field.id}" ${selectedFieldIds.has(field.id) ? 'checked' : ''}>
+                        <div class="field-name">${escapeHtml(field.name)}</div>
+                    </div>
+                    <div class="field-actions">
+                        <button class="btn btn-secondary" type="button" data-action="view" data-field-id="${field.id}">View Images</button>
+                        <button class="btn btn-primary" type="button" data-action="rename" data-field-id="${field.id}">Rename</button>
+                        <button class="btn btn-danger" type="button" data-action="delete" data-field-id="${field.id}">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+
+            list.querySelectorAll('button[data-action][data-field-id]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.getAttribute('data-action');
+                    const fieldId = button.getAttribute('data-field-id');
+                    if (!fieldId) return;
+
+                    if (action === 'view') {
+                        window.location.href = `field.html?farmId=${currentFarmId}&fieldId=${fieldId}`;
+                        return;
+                    }
+
+                    if (action === 'rename') {
+                        renameFieldById(fieldId);
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        deleteFieldById(fieldId);
+                    }
+                });
+            });
+
+            list.querySelectorAll('input[data-field-select-id]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const fieldId = checkbox.getAttribute('data-field-select-id');
+                    if (!fieldId) return;
+
+                    if (checkbox.checked) {
+                        selectedFieldIds.add(fieldId);
+                    } else {
+                        selectedFieldIds.delete(fieldId);
+                    }
+
+                    updateBulkDeleteControls();
+                });
+            });
+
+            updateBulkDeleteControls();
+        }
+
+        function updateBulkDeleteControls() {
+            const button = document.getElementById('delete-selected-btn');
+            const countNode = document.getElementById('selection-count');
+            if (!button || !countNode) return;
+
+            const count = selectedFieldIds.size;
+            button.disabled = count === 0;
+            countNode.textContent = `${count} selected`;
+            button.textContent = count ? `Delete Selected (${count})` : 'Delete Selected';
+        }
+
+        function loadFarm() {
+            return getAllFarms().then(farms => {
+                const farm = farms.find(item => item.id === currentFarmId);
+                if (!farm) {
+                    throw new Error('Farm not found');
+                }
+
+                if (!farm.fields) farm.fields = [];
+                document.getElementById('page-title').textContent = `${farm.name} Fields`;
+                document.getElementById('header-subtitle').textContent = `${farm.name} - Fields`;
+                renderFieldsList(farm);
+                return farm;
+            });
+        }
+
+        function createFieldsFromUploads() {
+            if (!pendingUploads.length) {
+                updateStatus('Select one or more images first.', true);
+                return;
+            }
+
+            loadFarm()
+                .then(farm => {
+                    const entries = pendingUploads.map(upload => ({
+                        file: upload.file,
+                        fieldName: upload.fieldName
+                    }));
+
+                    const imageSaves = entries.map((entry, index) => {
+                        const newFieldId = generateId();
+                        farm.fields.push({ id: newFieldId, name: entry.fieldName });
+
+                        return saveFieldImage({
+                            id: generateId(),
+                            name: formatImageDateLabel(entry.file, index),
+                            fieldId: newFieldId,
+                            blob: entry.file
+                        });
+                    });
+
+                    return Promise.all(imageSaves)
+                        .then(() => saveFarm(farm))
+                        .then(() => {
+                            pendingUploads = [];
+                            renderUploadList();
+                            renderFieldsList(farm);
+                            updateStatus(`${entries.length} field${entries.length === 1 ? '' : 's'} created from uploads.`);
+                        });
+                })
+                .catch(err => {
+                    console.error(err);
+                    updateStatus('Unable to create fields from uploaded images.', true);
+                });
+        }
+
+        function renameFieldById(fieldId) {
+            loadFarm()
+                .then(farm => {
+                    const field = (farm.fields || []).find(item => item.id === fieldId);
+                    if (!field) return;
+
+                    const nextName = prompt('Rename field:', field.name);
+                    if (nextName === null) return;
+
+                    const trimmed = nextName.trim();
+                    if (!trimmed) {
+                        updateStatus('Field name cannot be empty.', true);
+                        return;
+                    }
+
+                    field.name = trimmed;
+                    saveFarm(farm)
+                        .then(() => {
+                            renderFieldsList(farm);
+                            updateStatus('Field renamed.');
+                        })
+                        .catch(() => updateStatus('Unable to rename field.', true));
+                })
+                .catch(() => updateStatus('Unable to load farm for rename.', true));
+        }
+
+        function deleteFieldById(fieldId) {
+            if (!confirm('Delete this field and all its images?')) return;
+
+            loadFarm()
+                .then(farm => {
+                    farm.fields = (farm.fields || []).filter(field => field.id !== fieldId);
+                    return deleteImagesByField(fieldId)
+                        .then(() => saveFarm(farm))
+                        .then(() => {
+                            selectedFieldIds.delete(fieldId);
+                            renderFieldsList(farm);
+                            updateStatus('Field deleted.');
+                        });
+                })
+                .catch(() => updateStatus('Unable to delete field.', true));
+        }
+
+        function deleteSelectedFields() {
+            const ids = Array.from(selectedFieldIds);
+            if (!ids.length) return;
+
+            if (!confirm(`Delete ${ids.length} selected field${ids.length === 1 ? '' : 's'} and all their images?`)) return;
+
+            loadFarm()
+                .then(farm => {
+                    farm.fields = (farm.fields || []).filter(field => !selectedFieldIds.has(field.id));
+                    return Promise.all(ids.map(id => deleteImagesByField(id)))
+                        .then(() => saveFarm(farm))
+                        .then(() => {
+                            selectedFieldIds.clear();
+                            renderFieldsList(farm);
+                            updateStatus(`${ids.length} field${ids.length === 1 ? '' : 's'} deleted.`);
+                        });
+                })
+                .catch(() => updateStatus('Unable to delete selected fields.', true));
+        }
+
+        function assignPendingUploadsWithAutoNames(files) {
+            return loadFarm().then(farm => {
+                const usedNumbers = getUsedFieldNumbers(farm.fields || []);
+                pendingUploads = Array.from(files).map(file => {
+                    const nextNumber = getNextUnusedFieldNumber(usedNumbers);
+                    return {
+                        id: generateId(),
+                        file,
+                        fieldName: `Field ${nextNumber}`
+                    };
+                });
+                renderUploadList();
+                updateStatus(`${pendingUploads.length} pending upload${pendingUploads.length === 1 ? '' : 's'}. Names assigned automatically.`);
+            });
+        }
+
+        document.getElementById('file-input').addEventListener('change', event => {
+            const files = event.target.files;
+            if (!files || !files.length) {
+                pendingUploads = [];
+                renderUploadList();
+                updateStatus('No files selected.');
+                return;
+            }
+
+            assignPendingUploadsWithAutoNames(files)
+                .catch(() => updateStatus('Unable to auto-name pending fields.', true));
+        });
+
+        document.getElementById('create-fields-btn').addEventListener('click', createFieldsFromUploads);
+        document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedFields);
+        document.getElementById('clear-pending-btn').addEventListener('click', () => {
+            pendingUploads = [];
+            document.getElementById('file-input').value = '';
+            renderUploadList();
+            updateStatus('Pending uploads cleared.');
+        });
+
+        window.addEventListener('load', () => {
+            currentFarmId = getQueryParam('farmId');
+            if (!currentFarmId) {
+                alert('Farm not found');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            Promise.all([openFarmsDB(), openImagesDB()])
+                .then(() => loadFarm())
+                .then(() => updateStatus('Ready to create fields from images.'))
+                .catch(err => {
+                    console.error(err);
+                    alert('Unable to load fields page.');
+                    window.location.href = 'index.html';
+                });
+        });
+    </script>
+</body>
+</html>

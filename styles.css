@@ -1,0 +1,12 @@
+/* Shared site stylesheet */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:#f2f6ee;color:#2d3a20;min-height:100vh}
+header{background:linear-gradient(135deg,#2d5016 0%,#4a7c2c 100%);color:#fff;padding:1rem 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.header-content{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding:0 1.5rem;gap:1rem;flex-wrap:wrap}
+.logo{display:flex;flex-direction:column;gap:.2rem}
+.logo-name{font-size:1.4rem;font-weight:700}
+.logo-subtitle{font-size:.9rem;color:rgba(255,255,255,.9)}
+.main-nav a{color:#fff;text-decoration:none;margin-left:1rem;font-weight:600}
+.main-nav a:hover{text-decoration:underline}
+.container{max-width:1150px;margin:2rem auto;padding:0 1.5rem}
+@media (max-width:768px){.header-content{flex-direction:column;align-items:flex-start}.main-nav a{margin:6px 0 0}}

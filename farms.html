@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beechland Farms - Farms</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7f2;
+            color: #2d3a20;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
+            padding: 1.5rem 2rem;
+            color: #fff;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-bar a {
+            color: #fff;
+            text-decoration: none;
+            margin-left: 1.5rem;
+        }
+
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        p.lead {
+            color: #4d5c3d;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .farm-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .farm-card {
+            background: #fff;
+            border: 1px solid #d9e0c5;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(45, 80, 22, 0.08);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .farm-card h2 {
+            margin-top: 0;
+            color: #2d5016;
+        }
+
+        .farm-card p {
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .top-controls {
+            margin-bottom: 1.5rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.8rem 1.2rem;
+            background: #a8d65e;
+            color: #2d5016;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            background: #8bc34a;
+        }
+
+        .farm-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            color: #a00;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .farm-delete:hover {
+            background: #fee;
+        }
+
+        @media (max-width: 768px) {
+            .nav-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .nav-bar a {
+                margin: 0.5rem 0 0 0;
+            }
+
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-name">🌾 Beechland Farms</div>
+                <div class="logo-subtitle">Farms directory</div>
+            </div>
+            <nav class="main-nav">
+                <a href="index.html">Home</a>
+                <a href="farms.html">Farms</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Our Farms</h1>
+        <p class="lead">Discover the farms that make Beechland Farms special. Below are the locations currently featured on our site.</p>
+
+        <div class="top-controls">
+            <a class="back-link" href="index.html">Back to Home</a>
+        </div>
+
+        <div id="debug-panel" style="margin-top:1rem;">
+            <button id="refresh-farms" class="btn-small">Refresh farms</button>
+            <div id="debug-output" style="margin-top:0.8rem;color:#6b7a51;font-style:italic;"></div>
+        </div>
+
+        <div id="farms-list" class="farm-list">
+            <!-- Farms will be loaded here from IndexedDB -->
+        </div>
+
+    </div>
+
+    <script>
+        const dbName = 'BeechlandFarmsDB';
+        const storeName = 'farms';
+        let db;
+
+        function openDBFarms() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onerror = () => reject(new Error('DB open failed'));
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        function getAllFarms() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(new Error('Load failed'));
+            });
+        }
+
+        function createFarmCard(farm) {
+            const card = document.createElement('div');
+            card.className = 'farm-card';
+            const del = document.createElement('button');
+            del.className = 'farm-delete';
+            del.type = 'button';
+            del.title = 'Delete farm';
+            del.textContent = '×';
+            del.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!confirm(`Delete farm "${farm.name}"? This cannot be undone.`)) return;
+                deleteFarm(farm.id, card).catch(err => console.error('Delete failed', err));
+            });
+            card.appendChild(del);
+            const title = document.createElement('h2');
+            title.textContent = farm.name || 'Unnamed Farm';
+            card.appendChild(title);
+            const p = document.createElement('p');
+            const link = document.createElement('a');
+            link.className = 'back-link';
+            link.style.background = '#4a7c2c';
+            link.style.color = '#fff';
+            link.style.display = 'inline-block';
+            link.style.marginTop = '1rem';
+            link.textContent = 'View Fields';
+            link.href = `fields.html?farmId=${farm.id}`;
+            p.appendChild(link);
+            card.appendChild(p);
+            return card;
+        }
+
+        function deleteFarm(farmId, card) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                const req = store.delete(farmId);
+                req.onsuccess = () => {
+                    if (card && card.parentNode) card.parentNode.removeChild(card);
+                    resolve();
+                };
+                req.onerror = () => reject(new Error('Delete failed'));
+            });
+        }
+
+        function renderFarmsList(farms) {
+            const container = document.getElementById('farms-list');
+            container.innerHTML = '';
+            if (!farms.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = 'No farms yet. Add one from the home page.';
+                container.appendChild(empty);
+                return;
+            }
+            farms.forEach(farm => container.appendChild(createFarmCard(farm)));
+        }
+
+        function showDebug(farms) {
+            const out = document.getElementById('debug-output');
+            if (!out) return;
+            out.textContent = `Farms in DB: ${farms.length}\n` + JSON.stringify(farms.map(f => ({ id: f.id, name: f.name })), null, 2);
+        }
+
+        function loadAndRender() {
+            openDBFarms()
+                .then(() => getAllFarms())
+                .then(farms => {
+                    console.log('Loaded farms count:', farms.length);
+                    renderFarmsList(farms);
+                    showDebug(farms);
+                })
+                .catch(err => {
+                    console.error('Failed loading farms:', err);
+                    const container = document.getElementById('farms-list');
+                    if (container) container.innerHTML = `<div class="empty-state">Error loading farms: ${err.message}</div>`;
+                    const out = document.getElementById('debug-output');
+                    if (out) out.textContent = `Error: ${err.message}`;
+                });
+        }
+
+        window.addEventListener('load', () => {
+            loadAndRender();
+            document.getElementById('refresh-farms').addEventListener('click', loadAndRender);
+        });
+    </script>
+</body>
+</html>
